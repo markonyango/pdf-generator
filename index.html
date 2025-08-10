@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+</head>
+<body>
+  <form id="pdf_form">
+    <div>
+      <label for="font_input">Choose font file for PDF</label>
+      <input type="file" id="font_input" required />
+      <button id="generate" type="submit">Generate PDF</button>
+    </div>
+    <div style="display: flex; flex-direction: row; gap: 3em">
+      <div style="display: flex; flex-direction: column; gap: 3em;height: 1100">
+        <div style="flex: 1">
+          <label for="template_field">Typst Template</label>
+          <textarea id="template_field" cols="120" style="height: 100%" required></textarea>
+        </div>
+        <div style="flex: 1">
+          <label for="embed_field">Embed text data in PDF as supplementary meta data</label>
+          <textarea id="embed_field" cols="120" style="height: 100%"></textarea>
+        </div>
+      </div>
+      <div>
+        <label for="pdfResult">PDF Preview</label>
+        <iframe id="pdfResult" width="800" height="1100" type="application/pdf"
+          style="border: solid black 1px"></iframe>
+      </div>
+    </div>
+  </form>
+  <script type="module">
+    import init, { render_pdf } from "./pkg/pdf_generator.js";
+
+    init().then(({ init_logging }) => init_logging()).catch(console.error);
+
+    const example_template = `
+      #import sys: inputs
+      = Sample Header
+
+      #for item in inputs.items [
+        #item.at(0) #item.at(1) #item.at(2)\
+      ]
+
+      #let data = inputs.items.map(it => (
+        [#it.at(0)],
+        [#it.at(1)],
+        [#it.at(2)],
+        [#(it.at(0), it.at(2)).product()]
+      )).flatten()
+
+      #let total = inputs.items.fold(0.0, (acc, it) => acc + (it.at(0) * it.at(2)))
+
+      #table(
+        columns:4,
+        table.header([Qty], [Description], [Unit Price], [Total]),
+        ..data,
+        table.footer([],[],[Total],[#total])
+      )
+    `;
+
+    const pdf_form = document.getElementById("pdf_form");
+    const generateBtn = document.getElementById("generate");
+    const font_input = document.getElementById("font_input");
+    const pdf_Result = document.getElementById("pdfResult");
+    const template_field = document.getElementById("template_field");
+    const embed_field = document.getElementById("embed_field");
+
+    template_field.value = example_template;
+
+    pdf_form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      generateBtn.disabled = true;
+
+      let font_bytes = await font_input.files[0].bytes();
+      font_bytes = Array.from(font_bytes);
+
+      let template = template_field.value;
+
+      const render_options = {
+        template,
+        font: font_bytes
+      };
+
+      // Prepare the data to be rendered in the compile step
+      const data = {
+        embed: embed_field.value,
+        items: [
+          [1, "Consulting Service", 150],
+          [2, "Custom Software Developtment", 800],
+        ],
+      };
+
+      // Measure how fast rendering the PDF truly is
+      console.time("render");
+      let pdfBytes;
+      try {
+        pdfBytes = render_pdf(render_options, data);
+        console.timeEnd("render");
+
+        // Create a blob from the bytes returned by the WASM module
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const url = URL.createObjectURL(blob);
+        pdf_Result.setAttribute("src", url); // show the PDF in the iFrame
+
+        generateBtn.disabled = false;
+      } catch (error) {
+        console.timeEnd("render");
+        generateBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+
+</html>

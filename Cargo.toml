@@ -1,0 +1,32 @@
+[package]
+name = "pdf-generator"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+authors = ["Mark Onyango"]
+keywords = ["wasm", "typst", "pdf"]
+description = "Creates a PDF file from Typst templates with the data provided"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/markonyango/pdf-generator"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+console_error_panic_hook = { version = "0.1.7", default-features = false }
+typst = { version = "0.13.1", features = [], default-features = false }
+typst-pdf = { version = "0.13.1", default-features = false, features = [] }
+wasm-bindgen = { version = "0.2", default-features = false }
+typst-as-lib = { version = "0.14.4", default-features = false }
+serde = { version = "1.0.219", features = ["derive"], default-features = false }
+serde_json = { version = "1.0.142", default-features = false }
+serde-wasm-bindgen = { version = "0.6.5", default-features = false }
+console_log = { version = "1.0.0", features = ["color", "wasm-bindgen"] }
+log = { version = "0.4.27", default-features = false }
+
+
+[profile.release]
+opt-level = "s"
+lto = true
+
